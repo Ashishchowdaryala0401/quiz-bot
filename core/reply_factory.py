@@ -32,15 +32,34 @@ def record_current_answer(answer, current_question_id, session):
     '''
     Validates and stores the answer for the current question to django session.
     '''
-    return True, ""
+    if current_question_id is None:
+        return False, "No current question."
 
+    if "answers" not in session:
+        session["answers"] = {}
+
+    # Store the answer in the session
+    session["answers"][current_question_id] = answer
+    session.save()
+    return True, ""
 
 def get_next_question(current_question_id):
     '''
     Fetches the next question from the PYTHON_QUESTION_LIST based on the current_question_id.
     '''
+    if current_question_id is None:
+        return PYTHON_QUESTION_LIST[0]["question"], PYTHON_QUESTION_LIST[0]["id"]
+    
+    for i, question in enumerate(PYTHON_QUESTION_LIST):
+        if question["id"] == current_question_id:
+            if i + 1 < len(PYTHON_QUESTION_LIST):
+                next_question = PYTHON_QUESTION_LIST[i + 1]
+                return next_question["question"], next_question["id"]
+            else:
+                return None, None
+    
+    return None, None
 
-    return "dummy question", -1
 
 
 def generate_final_response(session):
@@ -48,5 +67,17 @@ def generate_final_response(session):
     Creates a final result message including a score based on the answers
     by the user for questions in the PYTHON_QUESTION_LIST.
     '''
+    answers = session.get("answers", {})
+    score = 0
+    
+    for question in PYTHON_QUESTION_LIST:
+        question_id = question["id"]
+        correct_answer = question["correct_answer"]
+        user_answer = answers.get(question_id)
+        
+        if user_answer == correct_answer:
+            score += 1
+    
+    total_questions = len(PYTHON_QUESTION_LIST)
+    return f"You've completed the quiz! Your score is {score}/{total_questions}."
 
-    return "dummy result"
